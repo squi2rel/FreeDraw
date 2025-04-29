@@ -1,0 +1,41 @@
+{
+	"schemaVersion": 1,
+	"id": "freedraw",
+	"version": "${version}",
+	"name": "FreeDraw",
+	"description": "Free Draw in VR",
+	"authors": [
+		"squi2rel"
+	],
+	"contact": {
+		"homepage": "https://github.com/squi2rel",
+		"sources": ""
+	},
+	"license": "GPL-3.0",
+	"icon": "assets/freedraw/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.github.squi2rel.freedraw.FreeDraw"
+		],
+		"client": [
+          "com.github.squi2rel.freedraw.FreeDrawClient"
+		]
+	},
+	"mixins": [
+		"freedraw.mixins.json",
+		{
+			"config": "freedraw.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.16.13",
+		"minecraft": "~1.21.4",
+		"java": ">=21",
+		"fabric-api": "*"
+	},
+	"suggests": {
+		"vivecraft": "*"
+	}
+}
