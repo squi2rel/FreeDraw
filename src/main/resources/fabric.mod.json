@@ -10,7 +10,7 @@
 	"contact": {
 		"sources": "https://github.com/squi2rel/FreeDraw"
 	},
-	"license": "GPL-3.0",
+	"license": "MIT",
 	"icon": "assets/freedraw/icon.png",
 	"environment": "*",
 	"entrypoints": {
