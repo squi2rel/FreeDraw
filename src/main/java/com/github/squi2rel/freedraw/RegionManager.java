@@ -26,11 +26,16 @@ public class RegionManager {
         HashBox box = worlds.get(path.world);
         if (box == null) return;
         box.remove(path);
+        if (box.isEmpty()) worlds.remove(path.world);
         for (Map.Entry<UUID, State> entry : playerStates.entrySet()) {
             if (entry.getValue().paths.contains(path)) {
                 remove(entry.getKey(), path);
             }
         }
+    }
+
+    public void removePlayer(UUID uuid) {
+        playerStates.remove(uuid);
     }
 
     public void update(UUID player, String world, double px, double py, double pz) {

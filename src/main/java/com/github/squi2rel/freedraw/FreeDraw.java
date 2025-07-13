@@ -86,6 +86,7 @@ public class FreeDraw implements ModInitializer {
             }
         }));
 		ServerPlayConnectionEvents.JOIN.register((h, p, s) -> DataHolder.onPlayerJoin(h.player));
+		ServerPlayConnectionEvents.DISCONNECT.register((h, s) -> DataHolder.onPlayerLeave(h.player));
 	}
 
 	public static int parseColor(String colorStr) throws CommandSyntaxException {

@@ -9,6 +9,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class HashBox {
     private final float cellSize;
     private final Map<GridIndex, Set<BrushPath>> gridMap = new ConcurrentHashMap<>();
+    private int size;
 
     public HashBox(float size) {
         this.cellSize = size;
@@ -36,6 +37,7 @@ public class HashBox {
     public void insert(BrushPath path) {
         for (GridIndex idx : getIndices(path)) {
             gridMap.computeIfAbsent(idx, k -> Collections.newSetFromMap(new ConcurrentHashMap<>())).add(path);
+            size++;
         }
     }
 
@@ -43,12 +45,14 @@ public class HashBox {
         for (GridIndex idx : getIndices(path)) {
             Set<BrushPath> set = gridMap.get(idx);
             if (set != null) {
-                set.remove(path);
-                if (set.isEmpty()) {
-                    gridMap.remove(idx);
-                }
+                if (set.remove(path)) size--;
+                if (set.isEmpty()) gridMap.remove(idx);
             }
         }
+    }
+
+    public boolean isEmpty() {
+        return size == 0;
     }
 
     public List<BrushPath> get(double px, double py, double pz, double range) {

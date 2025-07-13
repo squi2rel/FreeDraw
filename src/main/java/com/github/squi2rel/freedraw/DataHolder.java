@@ -61,6 +61,10 @@ public class DataHolder {
         ServerPacketHandler.sendTo(player, ServerPacketHandler.maxPoints(config.maxPoints));
     }
 
+    public static void onPlayerLeave(ServerPlayerEntity player) {
+        paths.removePlayer(player.getUuid());
+    }
+
     public static void saveConfig(Object config, Path path) {
         try {
             Files.writeString(path, new Gson().toJson(config));

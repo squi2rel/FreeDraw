@@ -8,8 +8,7 @@
 		"squi2rel"
 	],
 	"contact": {
-		"homepage": "https://github.com/squi2rel",
-		"sources": ""
+		"sources": "https://github.com/squi2rel/FreeDraw"
 	},
 	"license": "GPL-3.0",
 	"icon": "assets/freedraw/icon.png",
