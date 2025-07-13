@@ -3,6 +3,8 @@
   "package": "com.github.squi2rel.freedraw.mixin.client",
   "compatibilityLevel": "JAVA_21",
   "client": [
+    "ClientPlayNetworkHandlerMixin",
+    "MinecraftClientMixin"
   ],
   "injectors": {
     "defaultRequire": 1

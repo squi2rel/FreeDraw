@@ -3,7 +3,7 @@
 	"id": "freedraw",
 	"version": "${version}",
 	"name": "FreeDraw",
-	"description": "Free Draw in VR",
+	"description": "In-world brush & eraser",
 	"authors": [
 		"squi2rel"
 	],
