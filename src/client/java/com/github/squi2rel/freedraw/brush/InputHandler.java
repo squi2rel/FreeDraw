@@ -46,11 +46,11 @@ public class InputHandler {
                 }
             } else {
                 prevPos = null;
+                drawing = false;
                 if (currentPath != null) {
                     currentPath.flush(true);
                     currentPath.cache();
                     currentPath = null;
-                    drawing = false;
                 }
             }
             if (currentPath != null && System.currentTimeMillis() - lastUpload > uploadInterval) {
@@ -140,7 +140,7 @@ public class InputHandler {
         return dx * dx + dy * dy + dz * dz;
     }
 
-    private static boolean checkItem(ItemStack itemStack, Item item, float cmd1, float cmd2) {
+    public static boolean checkItem(ItemStack itemStack, Item item, float cmd1, float cmd2) {
         if (itemStack.getItem() != item) return false;
         CustomModelDataComponent data = itemStack.getComponents().get(DataComponentTypes.CUSTOM_MODEL_DATA);
         if (data == null) return false;

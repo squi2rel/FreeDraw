@@ -1,5 +1,6 @@
 package com.github.squi2rel.freedraw.network;
 
+import com.github.squi2rel.freedraw.DataHolder;
 import com.github.squi2rel.freedraw.FreeDraw;
 import com.github.squi2rel.freedraw.ServerConfig;
 import com.github.squi2rel.freedraw.brush.BrushPath;
@@ -25,7 +26,7 @@ public class ServerPacketHandler {
     public static void handle(ServerPlayerEntity player, ByteBuf buf) {
         short type = buf.readUnsignedByte();
         switch (type) {
-            case CONFIG -> ByteBufUtils.readString(buf, 16);
+            case CONFIG -> DataHolder.players.put(player.getUuid(), ByteBufUtils.readString(buf, 16));
             case NEW_PATH -> {
                 UUID old = ByteBufUtils.readUUID(buf);
                 UUID uuid = UUID.randomUUID();
@@ -70,8 +71,8 @@ public class ServerPacketHandler {
                     }
                     path.stop();
                     paths.insert(path);
+                    FreeDraw.LOGGER.info("Player {} created {} points with {}", player.getName(), path.size, path);
                 }
-                FreeDraw.LOGGER.info("added {} real points, total {}", size, path.size);
                 byte[] data = new byte[buf.readerIndex() - index];
                 buf.readerIndex(index);
                 buf.readBytes(data);
