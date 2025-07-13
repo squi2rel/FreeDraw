@@ -29,6 +29,6 @@ public class MinecraftClientMixin {
             cancellable = true
     )
     private void onItemUse(CallbackInfo ci, @Local ItemStack itemStack) {
-        if (InputHandler.checkItem(itemStack, brushItem, brushIdStart, brushIdEnd) || InputHandler.checkItem(itemStack, eraserItem, eraserId, eraserId)) ci.cancel();
+        if (FreeDrawClient.connected && InputHandler.checkItem(itemStack, brushItem, brushIdStart, brushIdEnd) || InputHandler.checkItem(itemStack, eraserItem, eraserId, eraserId)) ci.cancel();
     }
 }
