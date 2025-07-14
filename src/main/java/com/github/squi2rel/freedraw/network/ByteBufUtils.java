@@ -5,6 +5,9 @@ import org.joml.Quaternionf;
 import org.joml.Vector3d;
 import org.joml.Vector3f;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
@@ -48,6 +51,16 @@ public class ByteBufUtils {
         buf.writeFloat(v.z);
     }
 
+    public static Vector3f readVec3(DataInputStream buf, Vector3f out) throws IOException {
+        return out.set(buf.readFloat(), buf.readFloat(), buf.readFloat());
+    }
+
+    public static void writeVec3(DataOutputStream buf, Vector3f v) throws IOException {
+        buf.writeFloat(v.x);
+        buf.writeFloat(v.y);
+        buf.writeFloat(v.z);
+    }
+
     public static Vector3d readVec3d(ByteBuf buf) {
         return readVec3d(buf, new Vector3d());
     }
@@ -56,7 +69,17 @@ public class ByteBufUtils {
         return out.set(buf.readDouble(), buf.readDouble(), buf.readDouble());
     }
 
+    public static Vector3d readVec3d(DataInputStream buf, Vector3d out) throws IOException {
+        return out.set(buf.readDouble(), buf.readDouble(), buf.readDouble());
+    }
+
     public static void writeVec3d(ByteBuf buf, Vector3d v) {
+        buf.writeDouble(v.x);
+        buf.writeDouble(v.y);
+        buf.writeDouble(v.z);
+    }
+
+    public static void writeVec3d(DataOutputStream buf, Vector3d v) throws IOException {
         buf.writeDouble(v.x);
         buf.writeDouble(v.y);
         buf.writeDouble(v.z);

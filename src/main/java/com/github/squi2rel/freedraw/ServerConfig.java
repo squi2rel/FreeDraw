@@ -15,5 +15,5 @@ public class ServerConfig {
     public float brushLength = 0.1f, eraserLength = 0.1f;
     public int uploadInterval = 100;
     public int defaultColor = 0xFFFF0000;
-    public HashMap<UUID, BrushPath> paths = new HashMap<>();
+    public transient HashMap<UUID, BrushPath> paths = new HashMap<>();
 }

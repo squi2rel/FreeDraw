@@ -40,6 +40,7 @@ public class ServerPacketHandler {
                 if (path == null) return;
                 paths.remove(path);
                 sendTo(player, removePath(uuid));
+                FreeDraw.LOGGER.info("Player {} removed {} points with {}", player.getName().getString(), path.size, path);
             }
             case ADD_POINTS -> {
                 int index = buf.readerIndex();
@@ -51,6 +52,7 @@ public class ServerPacketHandler {
                 if (path.points.isEmpty()) {
                     prev = BrushPoint.read(buf);
                     path.points.add(prev);
+                    path.size++;
                     size--;
                 } else {
                     prev = path.points.getLast();
@@ -66,12 +68,13 @@ public class ServerPacketHandler {
                 }
                 if (buf.readBoolean()) {
                     if (path.points.size() < 2) {
+                        config.paths.remove(uuid);
                         sendTo(player, removePath(uuid));
                         return;
                     }
                     path.stop();
                     paths.insert(path);
-                    FreeDraw.LOGGER.info("Player {} created {} points with {}", player.getName(), path.size, path);
+                    FreeDraw.LOGGER.info("Player {} created {} points with {}", player.getName().getString(), path.size, path);
                 }
                 byte[] data = new byte[buf.readerIndex() - index];
                 buf.readerIndex(index);

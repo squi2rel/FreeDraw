@@ -76,9 +76,13 @@ public class InputHandler {
             if (prevPos.subtract(drawPoint).length() < 0.05) return;
             if (currentPath == null) {
                 drawing = true;
-                currentPath = new ClientBrushPath(UUID.randomUUID(), drawPoint);
+                currentPath = new ClientBrushPath(UUID.randomUUID(), prevPos);
                 paths.put(currentPath.uuid, currentPath);
                 ClientPacketHandler.newPath(currentPath);
+            }
+            if (currentPath.points.isEmpty()) {
+                Vector3d o = currentPath.offset;
+                currentPath.addFirst(new Vector3d(prevPos.x - o.x, prevPos.y - o.y, prevPos.z - o.z), new Vector3d(drawPoint.x - o.x, drawPoint.y - o.y, drawPoint.z - o.z), color);
             }
             currentPath.add(prevPos, drawPoint, color);
         }

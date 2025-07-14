@@ -81,9 +81,10 @@ public class ClientPacketHandler {
                 Vector3f prev;
                 if (path.points.isEmpty()) {
                     prev = ByteBufUtils.readVec3(buf, v3f1);
+                    buf.skipBytes(4);
                     Vector3f now = ByteBufUtils.readVec3(buf, v3f2);
-                    buf.readerIndex(buf.readerIndex() - 12);
-                    path.addRaw(v3d1.set(prev), v3d2.set(now), buf.readInt(), Integer.MAX_VALUE);
+                    buf.readerIndex(buf.readerIndex() - 16);
+                    path.addFirst(v3d1.set(prev), v3d2.set(now), buf.readInt());
                     size--;
                 } else {
                     prev = path.points.getLast().pos;

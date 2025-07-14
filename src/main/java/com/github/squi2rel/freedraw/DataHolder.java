@@ -1,22 +1,31 @@
 package com.github.squi2rel.freedraw;
 
 import com.github.squi2rel.freedraw.brush.BrushPath;
+import com.github.squi2rel.freedraw.brush.BrushPoint;
+import com.github.squi2rel.freedraw.network.ByteBufUtils;
 import com.github.squi2rel.freedraw.network.ServerPacketHandler;
 import com.google.gson.Gson;
 import net.minecraft.server.PlayerManager;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.math.Vec3d;
+import org.joml.Vector3d;
+import org.joml.Vector3f;
 
-import java.io.IOException;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.zip.DeflaterOutputStream;
+import java.util.zip.InflaterInputStream;
 
+import static com.github.squi2rel.freedraw.FreeDraw.configPath;
 import static com.github.squi2rel.freedraw.FreeDraw.server;
 
 public class DataHolder {
+    public static File pointsPath;
     public static ServerConfig config;
     public static RegionManager paths;
     public static HashMap<UUID, String> players = new HashMap<>();
@@ -24,31 +33,18 @@ public class DataHolder {
     public static void load() {
         config = loadConfig(ServerConfig.class, FreeDraw.configPath);
         paths = new RegionManager(config.broadcastRange);
-        HashMap<UUID, BrushPath> map = config.paths;
-        if (map != null) {
-            for (BrushPath path : map.values()) {
-                paths.insert(path);
-            }
+        pointsPath = configPath.getParent().resolve("data.bin").toFile();
+        HashMap<UUID, BrushPath> map = new HashMap<>();
+        loadPoints(map);
+        config.paths = map;
+        for (BrushPath path : map.values()) {
+            paths.insert(path);
         }
     }
 
     public static void save() {
+        savePoints(config.paths);
         saveConfig(config, FreeDraw.configPath);
-    }
-
-    public static <T> T loadConfig(Class<T> clazz, Path path) {
-        try {
-            return new Gson().fromJson(Files.readString(path), clazz);
-        } catch (Exception e) {
-            try {
-                saveConfig(clazz.getDeclaredConstructor().newInstance(), path);
-                return new Gson().fromJson(Files.readString(path), clazz);
-            } catch (Exception ex) {
-                RuntimeException th = new RuntimeException("Failed to load config file", ex);
-                th.addSuppressed(e);
-                throw th;
-            }
-        }
     }
 
     public static void update() {
@@ -68,6 +64,75 @@ public class DataHolder {
     public static void onPlayerLeave(ServerPlayerEntity player) {
         paths.removePlayer(player.getUuid());
         players.remove(player.getUuid());
+    }
+
+    public static void savePoints(Map<UUID, BrushPath> map) {
+        try (DataOutputStream out = new DataOutputStream(new DeflaterOutputStream(new BufferedOutputStream(new FileOutputStream(pointsPath))))) {
+            out.writeInt(map.size());
+            for (Map.Entry<UUID, BrushPath> entry : map.entrySet()) {
+                UUID uuid = entry.getKey();
+                BrushPath path = entry.getValue();
+                out.writeLong(uuid.getMostSignificantBits());
+                out.writeLong(uuid.getLeastSignificantBits());
+                out.writeUTF(path.world);
+                ByteBufUtils.writeVec3d(out, path.offset);
+                out.writeFloat(path.minX);
+                out.writeFloat(path.minY);
+                out.writeFloat(path.minZ);
+                out.writeFloat(path.maxX);
+                out.writeFloat(path.maxY);
+                out.writeFloat(path.maxZ);
+                out.writeInt(path.size);
+                out.writeInt(path.points.size());
+                for (BrushPoint point : path.points) {
+                    ByteBufUtils.writeVec3(out, point.pos);
+                    out.writeInt(point.color);
+                }
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static void loadPoints(Map<UUID, BrushPath> map) {
+        try (DataInputStream in = new DataInputStream(new InflaterInputStream(new BufferedInputStream(new FileInputStream(pointsPath))))) {
+            int size = in.readInt();
+            for (int i = 0; i < size; i++) {
+                UUID uuid = new UUID(in.readLong(), in.readLong());
+                BrushPath path = new BrushPath(uuid, in.readUTF(), ByteBufUtils.readVec3d(in, new Vector3d()));
+                path.minX = in.readFloat();
+                path.minY = in.readFloat();
+                path.minZ = in.readFloat();
+                path.maxX = in.readFloat();
+                path.maxY = in.readFloat();
+                path.maxZ = in.readFloat();
+                path.size = in.readInt();
+                int points = in.readInt();
+                path.points.ensureCapacity(points);
+                for (int j = 0; j < points; j++) {
+                    path.points.add(new BrushPoint(null, ByteBufUtils.readVec3(in, new Vector3f()), in.readInt(), false));
+                }
+                map.put(uuid, path);
+            }
+        } catch (FileNotFoundException ignored) {
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static <T> T loadConfig(Class<T> clazz, Path path) {
+        try {
+            return new Gson().fromJson(Files.readString(path), clazz);
+        } catch (Exception e) {
+            try {
+                saveConfig(clazz.getDeclaredConstructor().newInstance(), path);
+                return new Gson().fromJson(Files.readString(path), clazz);
+            } catch (Exception ex) {
+                RuntimeException th = new RuntimeException("Failed to load config file", ex);
+                th.addSuppressed(e);
+                throw th;
+            }
+        }
     }
 
     public static void saveConfig(Object config, Path path) {
