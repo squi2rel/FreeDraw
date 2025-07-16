@@ -21,8 +21,7 @@ import java.util.UUID;
 import java.util.zip.DeflaterOutputStream;
 import java.util.zip.InflaterInputStream;
 
-import static com.github.squi2rel.freedraw.FreeDraw.configPath;
-import static com.github.squi2rel.freedraw.FreeDraw.server;
+import static com.github.squi2rel.freedraw.FreeDraw.*;
 
 public class DataHolder {
     public static File pointsPath;
@@ -37,9 +36,13 @@ public class DataHolder {
         HashMap<UUID, BrushPath> map = new HashMap<>();
         loadPoints(map);
         config.paths = map;
+        long realPoints = 0, points = 0;
         for (BrushPath path : map.values()) {
             paths.insert(path);
+            realPoints += path.points.size();
+            points += path.size;
         }
+        LOGGER.info("Loaded {} paths with {} points, {} real points", map.size(), points, realPoints);
     }
 
     public static void save() {
@@ -100,6 +103,7 @@ public class DataHolder {
             for (int i = 0; i < size; i++) {
                 UUID uuid = new UUID(in.readLong(), in.readLong());
                 BrushPath path = new BrushPath(uuid, in.readUTF(), ByteBufUtils.readVec3d(in, new Vector3d()));
+                path.finalized = true;
                 path.minX = in.readFloat();
                 path.minY = in.readFloat();
                 path.minZ = in.readFloat();

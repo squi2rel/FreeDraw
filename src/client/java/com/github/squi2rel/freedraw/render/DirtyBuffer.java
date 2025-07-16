@@ -7,6 +7,7 @@ import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
 
 public class DirtyBuffer {
+    public static boolean drawing;
     public VertexBuffer buffer;
     public boolean dirty = true;
 
@@ -21,7 +22,9 @@ public class DirtyBuffer {
     }
 
     public void draw(Matrix4f viewMatrix, Matrix4f projectionMatrix, @Nullable ShaderProgram program) {
+        drawing = true;
         buffer.draw(viewMatrix, projectionMatrix, program);
+        drawing = false;
     }
 
     public void bind() {
