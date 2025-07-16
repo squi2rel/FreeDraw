@@ -21,7 +21,7 @@ import java.util.UUID;
 import static com.github.squi2rel.freedraw.FreeDrawClient.*;
 
 public class InputHandler {
-    public static final int DESKTOP_RANGE = 5;
+    public static final int DESKTOP_RANGE = 2;
     private static long lastUpload = System.currentTimeMillis();
     private static Vec3d prevPos = null;
     public static boolean drawing;
