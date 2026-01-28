@@ -1,6 +1,6 @@
 package com.github.squi2rel.freedraw.mixin.client;
 
-import com.github.squi2rel.freedraw.render.DirtyBuffer;
+import com.github.squi2rel.freedraw.render.PathRenderer;
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import net.minecraft.client.gl.ShaderProgram;
 import org.spongepowered.asm.mixin.Mixin;
@@ -12,8 +12,8 @@ public class ShaderProgramMixin {
             method = "initializeUniforms",
             at = @At(value = "CONSTANT", args = "intValue=12")
     )
-    private int forPerformance(int original) {
-        if (DirtyBuffer.drawing) return 0;
+    private int lessTextures(int original) {
+        if (PathRenderer.drawing) return 1;
         return original;
     }
 }

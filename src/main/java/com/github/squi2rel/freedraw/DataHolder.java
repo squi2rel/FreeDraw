@@ -1,14 +1,12 @@
 package com.github.squi2rel.freedraw;
 
 import com.github.squi2rel.freedraw.brush.BrushPath;
-import com.github.squi2rel.freedraw.brush.BrushPoint;
-import com.github.squi2rel.freedraw.network.ByteBufUtils;
+import com.github.squi2rel.freedraw.network.IOUtil;
 import com.github.squi2rel.freedraw.network.ServerPacketHandler;
 import com.google.gson.Gson;
 import net.minecraft.server.PlayerManager;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.math.Vec3d;
-import org.joml.Vector3d;
 import org.joml.Vector3f;
 
 import java.io.*;
@@ -78,7 +76,8 @@ public class DataHolder {
                 out.writeLong(uuid.getMostSignificantBits());
                 out.writeLong(uuid.getLeastSignificantBits());
                 out.writeUTF(path.world);
-                ByteBufUtils.writeVec3d(out, path.offset);
+                IOUtil.writeVec3d(out, path.offset);
+                out.writeInt(path.color);
                 out.writeFloat(path.minX);
                 out.writeFloat(path.minY);
                 out.writeFloat(path.minZ);
@@ -87,9 +86,8 @@ public class DataHolder {
                 out.writeFloat(path.maxZ);
                 out.writeInt(path.size);
                 out.writeInt(path.points.size());
-                for (BrushPoint point : path.points) {
-                    ByteBufUtils.writeVec3(out, point.pos);
-                    out.writeInt(point.color);
+                for (Vector3f point : path.points) {
+                    IOUtil.writeVec3f(out, point);
                 }
             }
         } catch (Exception e) {
@@ -102,7 +100,7 @@ public class DataHolder {
             int size = in.readInt();
             for (int i = 0; i < size; i++) {
                 UUID uuid = new UUID(in.readLong(), in.readLong());
-                BrushPath path = new BrushPath(uuid, in.readUTF(), ByteBufUtils.readVec3d(in, new Vector3d()));
+                BrushPath path = new BrushPath(uuid, in.readUTF(), IOUtil.readVec3d(in), in.readInt());
                 path.finalized = true;
                 path.minX = in.readFloat();
                 path.minY = in.readFloat();
@@ -114,13 +112,11 @@ public class DataHolder {
                 int points = in.readInt();
                 path.points.ensureCapacity(points);
                 for (int j = 0; j < points; j++) {
-                    path.points.add(new BrushPoint(null, ByteBufUtils.readVec3(in, new Vector3f()), in.readInt(), false));
+                    path.points.add(IOUtil.readVec3f(in));
                 }
                 map.put(uuid, path);
             }
-        } catch (FileNotFoundException ignored) {
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+        } catch (Exception ignored) {
         }
     }
 

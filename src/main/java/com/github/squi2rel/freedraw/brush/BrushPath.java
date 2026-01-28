@@ -2,6 +2,7 @@ package com.github.squi2rel.freedraw.brush;
 
 import org.jetbrains.annotations.NotNull;
 import org.joml.Vector3d;
+import org.joml.Vector3f;
 
 import java.util.ArrayList;
 import java.util.UUID;
@@ -10,16 +11,20 @@ public class BrushPath {
     public @NotNull UUID uuid;
     public String world;
     public Vector3d offset;
-    public ArrayList<BrushPoint> points = new ArrayList<>();
+    public ArrayList<Vector3f> points = new ArrayList<>();
     public int size = 0;
     public float minX = Float.POSITIVE_INFINITY, minY = Float.POSITIVE_INFINITY, minZ = Float.POSITIVE_INFINITY;
     public float maxX = Float.NEGATIVE_INFINITY, maxY = Float.NEGATIVE_INFINITY, maxZ = Float.NEGATIVE_INFINITY;
     public boolean finalized = false;
+    public int color;
 
-    public BrushPath(@NotNull UUID uuid, String world, Vector3d offset) {
+    public static final int SPLINE_STEPS = 20;
+
+    public BrushPath(@NotNull UUID uuid, String world, Vector3d offset, int color) {
         this.uuid = uuid;
         this.world = world;
         this.offset = offset;
+        this.color = color;
     }
 
     public void updateBounds(float x, float y, float z) {

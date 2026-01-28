@@ -1,17 +1,16 @@
 package com.github.squi2rel.freedraw;
 
 import com.github.squi2rel.freedraw.brush.BrushPath;
-import org.joml.Vector3d;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class HashBox {
+public class SpatialHash {
     private final float cellSize;
     private final Map<GridIndex, Set<BrushPath>> gridMap = new ConcurrentHashMap<>();
     private int size;
 
-    public HashBox(float size) {
+    public SpatialHash(float size) {
         this.cellSize = size;
     }
 
@@ -55,41 +54,26 @@ public class HashBox {
         return size == 0;
     }
 
-    public List<BrushPath> get(double px, double py, double pz, double range) {
-        Set<BrushPath> all = getAll(px, py, pz, range);
-        List<BrushPath> result = new ArrayList<>();
-        for (BrushPath path : all) {
-            double cx = (path.minX + path.maxX) / 2;
-            double cy = (path.minY + path.maxY) / 2;
-            double cz = (path.minZ + path.maxZ) / 2;
-            Vector3d o = path.offset;
-            double dist = Math.sqrt(Math.pow(o.x + cx - px, 2) + Math.pow(o.y + cy - py, 2) + Math.pow(o.z + cz - pz, 2));
-            if (dist <= range) {
-                result.add(path);
-            }
-        }
-        return result;
-    }
-
-    private Set<BrushPath> getAll(double px, double py, double pz, double range) {
+    public Set<BrushPath> get(double px, double py, double pz, double range) {
         int minX = (int) Math.floor((px - range) / cellSize);
         int minY = (int) Math.floor((py - range) / cellSize);
         int minZ = (int) Math.floor((pz - range) / cellSize);
         int maxX = (int) Math.floor((px + range) / cellSize);
         int maxY = (int) Math.floor((py + range) / cellSize);
         int maxZ = (int) Math.floor((pz + range) / cellSize);
-        Set<BrushPath> all = new HashSet<>();
+
+        Set<BrushPath> result = new HashSet<>();
         for (int x = minX; x <= maxX; x++) {
             for (int y = minY; y <= maxY; y++) {
                 for (int z = minZ; z <= maxZ; z++) {
-                    Set<BrushPath> set = gridMap.get(new GridIndex(x, y, z));
-                    if (set != null) {
-                        all.addAll(set);
+                    Set<BrushPath> bucket = gridMap.get(new GridIndex(x, y, z));
+                    if (bucket != null) {
+                        result.addAll(bucket);
                     }
                 }
             }
         }
-        return all;
+        return result;
     }
 
     public record GridIndex(int x, int y, int z) {}

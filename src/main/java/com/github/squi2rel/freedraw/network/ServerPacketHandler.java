@@ -4,7 +4,6 @@ import com.github.squi2rel.freedraw.DataHolder;
 import com.github.squi2rel.freedraw.FreeDraw;
 import com.github.squi2rel.freedraw.ServerConfig;
 import com.github.squi2rel.freedraw.brush.BrushPath;
-import com.github.squi2rel.freedraw.brush.BrushPoint;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
@@ -17,25 +16,24 @@ import java.util.UUID;
 
 import static com.github.squi2rel.freedraw.DataHolder.config;
 import static com.github.squi2rel.freedraw.DataHolder.paths;
-import static com.github.squi2rel.freedraw.network.ByteBufUtils.writeString;
+import static com.github.squi2rel.freedraw.network.IOUtil.writeString;
 import static com.github.squi2rel.freedraw.network.PacketID.*;
 
 public class ServerPacketHandler {
-    private static final Vector3f tmp1 = new Vector3f();
 
     public static void handle(ServerPlayerEntity player, ByteBuf buf) {
         short type = buf.readUnsignedByte();
         switch (type) {
-            case CONFIG -> DataHolder.players.put(player.getUuid(), ByteBufUtils.readString(buf, 16));
+            case CONFIG -> DataHolder.players.put(player.getUuid(), IOUtil.readString(buf, 16));
             case NEW_PATH -> {
-                UUID old = ByteBufUtils.readUUID(buf);
+                UUID old = IOUtil.readUUID(buf);
                 UUID uuid = UUID.randomUUID();
-                BrushPath path = new BrushPath(uuid, player.getWorld().getRegistryKey().getValue().toString(), ByteBufUtils.readVec3d(buf));
+                BrushPath path = new BrushPath(uuid, player.getWorld().getRegistryKey().getValue().toString(), IOUtil.readVec3d(buf), buf.readInt());
                 config.paths.put(uuid, path);
-                sendTo(player, newPath(old, uuid));
+                sendTo(player, newPath(old, uuid, path.color));
             }
             case REMOVE_PATH -> {
-                UUID uuid = ByteBufUtils.readUUID(buf);
+                UUID uuid = IOUtil.readUUID(buf);
                 BrushPath path = config.paths.remove(uuid);
                 if (path == null) return;
                 paths.remove(path);
@@ -44,13 +42,13 @@ public class ServerPacketHandler {
             }
             case ADD_POINTS -> {
                 int index = buf.readerIndex();
-                UUID uuid = ByteBufUtils.readUUID(buf);
+                UUID uuid = IOUtil.readUUID(buf);
                 BrushPath path = config.paths.get(uuid);
                 if (path == null || path.finalized) throw new RuntimeException("Invalid path!");
                 int size = buf.readInt();
-                BrushPoint prev;
+                Vector3f prev;
                 if (path.points.isEmpty()) {
-                    prev = BrushPoint.read(buf);
+                    prev = IOUtil.readVec3f(buf);
                     path.points.add(prev);
                     path.size++;
                     size--;
@@ -58,16 +56,14 @@ public class ServerPacketHandler {
                     prev = path.points.getLast();
                 }
                 for (int i = 0; i < size; i++) {
-                    BrushPoint now = BrushPoint.read(buf);
-                    int len = (int) (now.pos.sub(prev.pos, tmp1).length() / 0.1);
-                    path.size += len + 1;
+                    Vector3f now = IOUtil.readVec3f(buf);
                     path.points.add(now);
-                    Vector3f pos = now.pos;
-                    path.updateBounds(pos.x, pos.y, pos.z);
+                    path.size += Math.max(1, (int) (prev.distance(now) * BrushPath.SPLINE_STEPS));
+                    path.updateBounds(now.x, now.y, now.z);
                     prev = now;
                 }
                 if (buf.readBoolean()) {
-                    if (path.points.size() < 2) {
+                    if (path.points.size() < 3) {
                         config.paths.remove(uuid);
                         sendTo(player, removePath(uuid));
                         return;
@@ -118,38 +114,42 @@ public class ServerPacketHandler {
         writeString(buf, config.brushItem);
         buf.writeFloat(config.brushIdStart);
         buf.writeFloat(config.brushIdEnd);
-        ByteBufUtils.writeQuaternion(buf, config.brushQuat);
+        IOUtil.writeQuaternion(buf, config.brushQuat);
         buf.writeFloat(config.brushLength);
         writeString(buf, config.eraserItem);
         buf.writeFloat(config.eraserId);
-        ByteBufUtils.writeQuaternion(buf, config.eraserQuat);
+        IOUtil.writeQuaternion(buf, config.eraserQuat);
         buf.writeFloat(config.eraserLength);
         buf.writeInt(config.maxPoints);
         buf.writeInt(config.uploadInterval);
         buf.writeInt(config.defaultColor);
+        buf.writeFloat(config.desktopRange);
         return toByteArray(buf);
     }
 
-    public static byte[] newPath(UUID old, UUID uuid) {
+    public static byte[] newPath(UUID old, UUID uuid, int color) {
         ByteBuf buf = create(NEW_PATH);
-        ByteBufUtils.writeUUID(buf, old);
-        ByteBufUtils.writeUUID(buf, uuid);
+        IOUtil.writeUUID(buf, old);
+        IOUtil.writeUUID(buf, uuid);
+        buf.writeInt(color);
         return toByteArray(buf);
     }
 
     public static byte[] createPath(BrushPath path) {
         ByteBuf buf = create(CREATE_PATH);
-        ByteBufUtils.writeUUID(buf, path.uuid);
-        ByteBufUtils.writeVec3d(buf, path.offset);
+        IOUtil.writeUUID(buf, path.uuid);
+        IOUtil.writeVec3d(buf, path.offset);
+        buf.writeInt(path.color);
+        buf.writeBoolean(path.finalized);
         return toByteArray(buf);
     }
 
     public static byte[] addPoints(BrushPath path) {
         ByteBuf buf = create(ADD_POINTS);
-        ByteBufUtils.writeUUID(buf, path.uuid);
+        IOUtil.writeUUID(buf, path.uuid);
         buf.writeInt(path.points.size());
-        for (BrushPoint point : path.points) {
-            BrushPoint.write(buf, point);
+        for (Vector3f point : path.points) {
+            IOUtil.writeVec3f(buf, point);
         }
         buf.writeBoolean(true);
         return toByteArray(buf);
@@ -157,7 +157,7 @@ public class ServerPacketHandler {
 
     public static byte[] removePath(UUID uuid) {
         ByteBuf buf = create(REMOVE_PATH);
-        ByteBufUtils.writeUUID(buf, uuid);
+        IOUtil.writeUUID(buf, uuid);
         return toByteArray(buf);
     }
 

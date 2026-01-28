@@ -21,7 +21,6 @@ import java.util.UUID;
 import static com.github.squi2rel.freedraw.FreeDrawClient.*;
 
 public class InputHandler {
-    public static final int DESKTOP_RANGE = 2;
     private static long lastUpload = System.currentTimeMillis();
     private static Vec3d prevPos = null;
     public static boolean drawing;
@@ -30,7 +29,7 @@ public class InputHandler {
         WorldRenderEvents.BEFORE_ENTITIES.register(ctx -> {
             if (!FreeDrawClient.connected) return;
             MinecraftClient client = MinecraftClient.getInstance();
-            if (client.player == null || client.world == null || ctx.camera().getFocusedEntity() != client.player || ctx.camera().isThirdPerson()) return;
+            if (client.player == null || client.world == null || ctx.camera().getFocusedEntity() != client.player || !isVRMode() && ctx.camera().isThirdPerson()) return;
             if (client.options.useKey.isPressed()) {
                 for (Hand hand : Hand.values()) {
                     ItemStack item = client.player.getStackInHand(hand);
@@ -48,13 +47,13 @@ public class InputHandler {
                 prevPos = null;
                 drawing = false;
                 if (currentPath != null) {
-                    currentPath.flush(true);
+                    currentPath.upload(true);
                     currentPath.cache();
                     currentPath = null;
                 }
             }
             if (currentPath != null && System.currentTimeMillis() - lastUpload > uploadInterval) {
-                currentPath.flush(false);
+                currentPath.upload(false);
                 lastUpload = System.currentTimeMillis();
             }
         });
@@ -63,41 +62,41 @@ public class InputHandler {
     private static void updateBrush(WorldRenderContext ctx, Hand hand) {
         if (drawing && currentPath == null) return;
         Vec3d drawPoint;
-        if (Vivecraft.loaded && Vivecraft.isVRActive()) {
+        if (isVRMode()) {
             Vector3f off = Vivecraft.getHandDirection(hand).rotate(brushQuat).mul(brushLength);
             drawPoint = Vivecraft.getHandPosition(hand).add(off.x, off.y, off.z);
             if (drawPoint == null) return;
         } else {
             Vec3d eyePos = ctx.camera().getPos();
-            Vector3f lookVec = new Vector3f(0, 0, -1).rotate(ctx.camera().getRotation()).mul(DESKTOP_RANGE);
+            Vector3f lookVec = new Vector3f(0, 0, -1).rotate(ctx.camera().getRotation()).mul(desktopRange);
             drawPoint = eyePos.add(lookVec.x, lookVec.y, lookVec.z);
         }
         if (prevPos != null) {
-            if (prevPos.subtract(drawPoint).length() < 0.05) return;
+            if (prevPos.subtract(drawPoint).length() < 0.01) return;
             if (currentPath == null) {
                 drawing = true;
-                currentPath = new ClientBrushPath(UUID.randomUUID(), prevPos);
+                currentPath = new ClientBrushPath(UUID.randomUUID(), prevPos, color, false);
                 paths.put(currentPath.uuid, currentPath);
                 ClientPacketHandler.newPath(currentPath);
             }
-            if (currentPath.points.isEmpty()) {
-                Vector3d o = currentPath.offset;
-                currentPath.addFirst(new Vector3d(prevPos.x - o.x, prevPos.y - o.y, prevPos.z - o.z), new Vector3d(drawPoint.x - o.x, drawPoint.y - o.y, drawPoint.z - o.z), color);
-            }
-            currentPath.add(prevPos, drawPoint, color);
+            currentPath.add(drawPoint.x, drawPoint.y, drawPoint.z);
         }
         prevPos = drawPoint;
     }
 
+    private static boolean isVRMode() {
+        return Vivecraft.loaded && Vivecraft.isVRActive();
+    }
+
     private static void updateEraser(WorldRenderContext ctx, Hand hand) {
         Vec3d start, end;
-        if (Vivecraft.loaded && Vivecraft.isVRActive()) {
+        if (isVRMode()) {
             start = Vivecraft.getHandPosition(hand);
             Vector3f off = Vivecraft.getHandDirection(hand).rotate(eraserQuat).mul(eraserLength);
             end = start.add(off.x, off.y, off.z);
         } else {
             start = ctx.camera().getPos();
-            Vector3f lookVec = new Vector3f(0, 0, -1).rotate(ctx.camera().getRotation()).mul(DESKTOP_RANGE);
+            Vector3f lookVec = new Vector3f(0, 0, -1).rotate(ctx.camera().getRotation()).mul(desktopRange);
             end = start.add(lookVec.x, lookVec.y, lookVec.z);
         }
         outer: for (ClientBrushPath path : paths.values()) {
@@ -106,7 +105,7 @@ public class InputHandler {
             Vector3d offset = path.offset;
             float sx = (float) (start.x - offset.x), sy = (float) (start.y - offset.y), sz = (float) (start.z - offset.z);
             float ex = (float) (end.x - offset.x), ey = (float) (end.y - offset.y), ez = (float) (end.z - offset.z);
-            float v = (float) DESKTOP_RANGE / 2;
+            float v = desktopRange / 2;
             if (lenBox(sx, sy, sz, path.minX, path.minY, path.minZ, path.maxX, path.maxY, path.maxZ) > v && lenBox(ex, ey, ez, path.minX, path.minY, path.minZ, path.maxX, path.maxY, path.maxZ) > v) continue;
             for (int i = 0; i < c.length; i += 3) {
                 if (len(c[i], c[i + 1], c[i + 2], sx, sy, sz, ex, ey, ez) <= 0.005) {

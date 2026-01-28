@@ -11,7 +11,7 @@ import static com.github.squi2rel.freedraw.FreeDraw.server;
 
 public class RegionManager {
     private final int boxSize;
-    private final Map<String, HashBox> worlds = new HashMap<>();
+    private final Map<String, SpatialHash> worlds = new HashMap<>();
     private final Map<UUID, State> playerStates = new HashMap<>();
 
     public RegionManager(int boxSize) {
@@ -19,11 +19,11 @@ public class RegionManager {
     }
 
     public void insert(BrushPath path) {
-        worlds.computeIfAbsent(path.world, k -> new HashBox(boxSize)).insert(path);
+        worlds.computeIfAbsent(path.world, k -> new SpatialHash(boxSize)).insert(path);
     }
 
     public void remove(BrushPath path) {
-        HashBox box = worlds.get(path.world);
+        SpatialHash box = worlds.get(path.world);
         if (box == null) return;
         box.remove(path);
         if (box.isEmpty()) worlds.remove(path.world);
@@ -39,7 +39,7 @@ public class RegionManager {
     }
 
     public void update(UUID player, String world, double px, double py, double pz) {
-        HashBox box = worlds.get(world);
+        SpatialHash box = worlds.get(world);
         if (box == null) return;
 
         State state = playerStates.get(player);
@@ -49,7 +49,7 @@ public class RegionManager {
             playerStates.put(player, state);
         }
 
-        List<BrushPath> current = box.get(px, py, pz, config.broadcastRange);
+        Set<BrushPath> current = box.get(px, py, pz, config.broadcastRange);
         if (Objects.equals(state.world, world)) {
             Set<BrushPath> entered = new HashSet<>(current);
             entered.removeAll(state.paths);

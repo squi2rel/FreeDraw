@@ -19,9 +19,12 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.text.MutableText;
 import net.minecraft.text.Style;
 import net.minecraft.text.Text;
+import net.minecraft.text.TextColor;
 import net.minecraft.util.DyeColor;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,6 +54,12 @@ public class FreeDraw implements ModInitializer {
 						.then(CommandManager.argument("color", StringArgumentType.string())
 								.executes(s -> {
 									String str = s.getArgument("color", String.class).toLowerCase();
+									if (str.equalsIgnoreCase("rainbow")) {
+										ServerPlayerEntity player = s.getSource().getPlayerOrThrow();
+										ServerPacketHandler.sendTo(player, ServerPacketHandler.color(0));
+										player.sendMessage(createRainbowText("Current color: RAINBOW", 0.8f, 1.0f));
+										return 1;
+									}
 									DyeColor dyeColor = DyeColor.byName(str, null);
 									int color;
 									if (dyeColor != null) {
@@ -87,6 +96,50 @@ public class FreeDraw implements ModInitializer {
         }));
 		ServerPlayConnectionEvents.JOIN.register((h, p, s) -> DataHolder.onPlayerJoin(h.player));
 		ServerPlayConnectionEvents.DISCONNECT.register((h, s) -> DataHolder.onPlayerLeave(h.player));
+	}
+
+	public static MutableText createRainbowText(String content, float saturation, float brightness) {
+		MutableText result = Text.empty();
+		int length = content.length();
+
+		for (int i = 0; i < length; i++) {
+			float hue = (float) i / length;
+			int colorRGB = hsbToRgb(hue, saturation, brightness);
+
+			TextColor color = TextColor.fromRgb(colorRGB & 0xFFFFFF);
+			result.append(Text.literal(String.valueOf(content.charAt(i))).styled(style -> style.withColor(color)));
+		}
+
+		return result;
+	}
+
+	public static int hsbToRgb(float h, float s, float b) {
+		int r = 0, g = 0, b_ = 0;
+		if (s == 0) {
+			r = g = b_ = (int) (b * 255.0f + 0.5f);
+		} else {
+			float h_ = (h - (float) Math.floor(h)) * 6.0f;
+			float f = h_ - (float) Math.floor(h_);
+			float p = b * (1.0f - s);
+			float q = b * (1.0f - s * f);
+			float t = b * (1.0f - (s * (1.0f - f)));
+			switch ((int) h_) {
+				case 0 -> { r = (int) (b * 255.0f + 0.5f); g = (int) (t * 255.0f + 0.5f); b_ = (int) (p * 255.0f + 0.5f); }
+				case 1 -> { r = (int) (q * 255.0f + 0.5f); g = (int) (b * 255.0f + 0.5f); b_ = (int) (p * 255.0f + 0.5f); }
+				case 2 -> { r = (int) (p * 255.0f + 0.5f); g = (int) (b * 255.0f + 0.5f); b_ = (int) (t * 255.0f + 0.5f); }
+				case 3 -> { r = (int) (p * 255.0f + 0.5f); g = (int) (q * 255.0f + 0.5f); b_ = (int) (b * 255.0f + 0.5f); }
+				case 4 -> { r = (int) (t * 255.0f + 0.5f); g = (int) (p * 255.0f + 0.5f); b_ = (int) (b * 255.0f + 0.5f); }
+				case 5 -> { r = (int) (b * 255.0f + 0.5f); g = (int) (p * 255.0f + 0.5f); b_ = (int) (q * 255.0f + 0.5f); }
+			}
+		}
+		return 0xFF000000 | (r << 16) | (g << 8) | b_;
+	}
+
+	public static boolean checkVersion(String v) {
+		String[] p1 = StringUtils.split(v, '.');
+		String[] p2 = StringUtils.split(version, '.');
+		if (p1.length < 2 || p2.length < 2) return false;
+		return p1[0].equals(p2[0]) && p1[1].equals(p2[1]);
 	}
 
 	public static int parseColor(String colorStr) throws CommandSyntaxException {

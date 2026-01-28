@@ -9,13 +9,12 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.minecraft.client.MinecraftClient;
 import net.minecraft.item.Item;
-import org.apache.commons.lang3.StringUtils;
 import org.joml.Quaternionf;
 
-import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class FreeDrawClient implements ClientModInitializer {
 	public static Item brushItem, eraserItem;
@@ -24,17 +23,18 @@ public class FreeDrawClient implements ClientModInitializer {
 	public static float brushLength,  eraserLength;
 	public static int maxPoints;
 	public static boolean connected;
-	public static HashMap<UUID, ClientBrushPath> paths = new HashMap<>();
+	public static Map<UUID, ClientBrushPath> paths = new ConcurrentHashMap<>();
 	public static ClientBrushPath currentPath = null;
 	public static int uploadInterval;
 	public static int color;
+	public static float desktopRange;
 
 	@Override
 	public void onInitializeClient() {
 		InputHandler.register();
 		PathRenderer.register();
 
-		ClientPlayNetworking.registerGlobalReceiver(DrawPayload.ID, (p, c) -> MinecraftClient.getInstance().execute(() -> {
+		ClientPlayNetworking.registerGlobalReceiver(DrawPayload.ID, (p, c) -> {
             ByteBuf buf = Unpooled.wrappedBuffer(p.data());
             try {
                 ClientPacketHandler.handle(buf);
@@ -43,7 +43,7 @@ public class FreeDrawClient implements ClientModInitializer {
             } finally {
                 buf.release();
             }
-        }));
+        });
 	}
 
 	public static void onDisconnect() {
@@ -56,12 +56,7 @@ public class FreeDrawClient implements ClientModInitializer {
 			path.remove();
 		}
 		paths.clear();
-	}
 
-	public static boolean checkVersion(String v) {
-		String[] p1 = StringUtils.split(v, '.');
-		String[] p2 = StringUtils.split(FreeDraw.version, '.');
-		if (p1.length < 2 || p2.length < 2) return false;
-		return p1[0].equals(p2[0]) && p1[1].equals(p2[1]);
+		PathRenderer.reset();
 	}
 }
