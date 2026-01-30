@@ -59,7 +59,6 @@ public class PathRenderer {
 
             if (!registered) {
                 MinecraftClient.getInstance().getTextureManager().registerTexture(WHITE, new WhiteTexture());
-                buffer = new VertexBuffer(GlUsage.DYNAMIC_WRITE);
                 registered = true;
             }
             BRUSH_PATH.startDrawing();
@@ -73,7 +72,7 @@ public class PathRenderer {
     }
 
     private static void draw(Collection<ClientBrushPath> paths, WorldRenderContext ctx) {
-
+        if (buffer == null) buffer = new VertexBuffer(GlUsage.DYNAMIC_WRITE);
         BufferBuilder builder = getBufferBuilder();
 
         int dynamicNodes = 0;
